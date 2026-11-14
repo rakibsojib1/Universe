@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>COSMOS 3D — Observable Universe POV Explorer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <!-- Fullscreen 3D WebGL Space Viewport -->
+  <div id="cosmos3d" aria-label="Interactive 3D Observable Universe Viewport"></div>
+  <!-- Projected 3D Object Labels Layer -->
+  <div id="labelsLayer" class="labels-layer hud-element" aria-hidden="true"></div>
+
+  <!-- 3D Hover Reticle Tooltip -->
+  <div id="hoverTooltip" class="hover-tooltip" hidden>
+    <span id="tooltipEmoji">🌍</span>
+    <div>
+      <strong id="tooltipName">Earth</strong>
+      <small id="tooltipDist">0 km • Click to Fly &amp; Inspect</small>
+    </div>
+  </div>
+
+  <!-- TOP COCKPIT HUD -->
+  <header class="cockpit-top hud-element">
+    <div class="brand-cluster">
+      <div class="brand-orb"></div>
+      <div>
+        <span class="brand-title">COSMOS 3D</span>
+        <span class="brand-sub">EARTH → OBSERVABLE UNIVERSE POV</span>
+      </div>
+    </div>
+
+    <div class="telemetry-bar">
+      <div class="tele-item">
+        <span class="tele-label">SECTOR</span>
+        <span class="tele-val" id="hudSector">Earth &amp; Orbital Space</span>
+      </div>
+      <div class="tele-item hide-sm">
+        <span class="tele-label">SCALE</span>
+        <span class="tele-val mono" id="hudScale">10⁷ m</span>
+      </div>
+      <div class="tele-item hide-md">
+        <span class="tele-label">CAMERA RANGE</span>
+        <span class="tele-val mono" id="hudRange">8.8 units</span>
+      </div>
+    </div>
+
+    <div class="top-actions">
+      <div class="warp-search-wrap">
+        <input type="text" id="warpSearchInput" placeholder="Warp to any object... (Ctrl+K)" autocomplete="off" aria-label="Search and warp to celestial object" />
+        <div id="warpDropdown" class="warp-dropdown" hidden></div>
+      </div>
+      <button class="hud-btn primary" id="exitSystemBtn" hidden>← Return to Cosmic Map</button>
+      <button class="hud-btn primary" id="grandTourBtn" title="Cinematic Guided Tour of the Universe">🚀 Grand Tour</button>
+      <button class="hud-btn" id="orbitSpeedBtn" title="Toggle Orbital Time-Warp">⏱ Orbits: 1×</button>
+      <button class="hud-btn" id="audioToggleBtn" title="Toggle Space Ambient Audio">🔇 Audio</button>
+      <button class="hud-btn" id="helpToggleBtn" title="Flight Controls">Controls</button>
+      <button class="hud-btn" id="hudToggleBtn" title="Toggle HUD (H)">Hide HUD</button>
+    </div>
+  </header>
+
+  <!-- LEFT QUICK-JUMP TARGETS FOR CURRENT SCALE -->
+  <aside class="sector-objects hud-element" id="sectorObjectsPanel">
+    <div class="panel-kicker">OBJECTS IN SECTOR (CLICK TO FLY)</div>
+    <div class="sector-chips" id="sectorChips"></div>
+  </aside>
+
+  <!-- BOTTOM SCALE FLIGHT SLIDER -->
+  <footer class="cockpit-bottom hud-element">
+    <div class="scale-info-row">
+      <div>
+        <span class="scale-badge" id="scaleBadge">SCALE 1 / 8</span>
+        <strong id="scaleTitle">Earth &amp; Orbital Space</strong>
+      </div>
+      <div class="flight-btns">
+        <button class="hud-btn" id="flyInBtn">← Fly In</button>
+        <button class="hud-btn primary" id="flyOutBtn">Fly Out →</button>
+      </div>
+    </div>
+
+    <div class="slider-track-wrap">
+      <input type="range" id="cosmicSlider" min="0" max="7" step="1" value="0" aria-label="Cosmic Scale Slider" />
+      <div class="slider-labels" id="sliderLabels"></div>
+    </div>
+  </footer>
+
+  <!-- RIGHT / MOBILE OBJECT DOSSIER DRAWER -->
+  <aside class="dossier-drawer hud-element" id="dossierDrawer" hidden aria-label="Celestial Object Details">
+    <div class="dossier-header">
+      <span class="dossier-cat" id="dossierCat">Category</span>
+      <button class="close-btn" id="closeDossierBtn" aria-label="Close Dossier">✕</button>
+    </div>
+
+    <div class="dossier-hero">
+      <span class="dossier-emoji" id="dossierEmoji">🌍</span>
+      <div>
+        <h2 id="dossierTitle">Earth</h2>
+        <p class="dossier-tagline" id="dossierTagline">Tagline</p>
+      </div>
+    </div>
+
+    <p class="dossier-desc" id="dossierDesc"></p>
+
+    <div class="dossier-stats" id="dossierStats"></div>
+
+    <div class="dossier-facts">
+      <h3>Scientific Notes</h3>
+      <ul id="dossierFacts"></ul>
+    </div>
+
+    <div class="dossier-actions" style="display:grid;gap:0.5rem;">
+      <button class="hud-btn primary full" id="enterSystemBtn" hidden>🔭 Enter &amp; Scan Planetary System</button>
+      <button class="hud-btn primary full" id="enterCountryBtn" hidden>🔍 Zoom Into Full Bangladesh</button>
+      <button class="hud-btn primary full" id="enterPlanetBtn" hidden>🪐 Explore Inside Planet (Landmarks &amp; Moons)</button>
+      <button class="hud-btn full" id="refocusBtn">Lock &amp; Orbit Object</button>
+    </div>
+  </aside>
+
+  <!-- FLIGHT CONTROLS OVERLAY -->
+  <div class="controls-modal" id="controlsModal" hidden>
+    <div class="controls-card">
+      <button class="close-btn" id="closeHelpBtn" aria-label="Close Controls">✕</button>
+      <h2>Spacecraft Flight Controls</h2>
+      <div class="controls-grid">
+        <div><strong>Left-Click + Drag</strong><span>Orbit / Look Around (1-Finger Touch)</span></div>
+        <div><strong>Scroll / Pinch</strong><span>Zoom In &amp; Out</span></div>
+        <div><strong>Click Any Object</strong><span>Autopilot Fly-To &amp; Open Details</span></div>
+        <div><strong>W A S D / Arrows</strong><span>Free-Flight Thrusters (Shift = Boost)</span></div>
+        <div><strong>Q / E</strong><span>Ascend / Descend</span></div>
+        <div><strong>Ctrl + K / H</strong><span>Search Warp Target / Toggle HUD</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating Show HUD button when HUD is hidden -->
+  <button class="show-hud-pill" id="showHudBtn" hidden>Show HUD (H)</button>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
